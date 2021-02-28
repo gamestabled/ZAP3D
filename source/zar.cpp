@@ -5,6 +5,7 @@
 #include <cerrno>
 #include <cstring>
 #include <experimental/filesystem>
+#include <algorithm>
 
 const static int BUF_SIZE = 4096;
 
@@ -62,6 +63,7 @@ void ZAR::extractImpl(void) {
 
             file.seekg(offsetToFilename);
             std::getline(file, currentFile.filename, '\0');
+            std::replace(currentFile.filename.begin(), currentFile.filename.end(), '\\', '/');
 
             file.seekg(offsetToDataSection + (fileNum * 4));
             currentFile.offsetToFileData = ReadU32();
