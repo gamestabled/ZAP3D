@@ -1,7 +1,7 @@
 # .RECIPEPREFIX = 
 
 CXX      := g++
-CXXFLAGS := -pedantic-errors -Wall -Wextra -Werror
+CXXFLAGS := -pedantic-errors -Wall -Wextra
 LDFLAGS  := -lstdc++fs
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)

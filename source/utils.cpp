@@ -27,3 +27,13 @@ uint16_t ReadU16FromFile(std::ifstream& ifile) {
 
     return number;
 }
+
+uint8_t ReadU8FromFile(std::ifstream& ifile) {
+    uint8_t buf[8] = { 0 };
+    uint16_t number = 0;
+
+    ifile.read((char*)buf, 1);
+    number |= (uint32_t)buf[0];
+
+    return number;
+}

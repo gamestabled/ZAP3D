@@ -3,6 +3,7 @@
 #include <experimental/filesystem>
 
 #include "zar.hpp"
+#include "qbf.hpp"
 
 using path = std::experimental::filesystem::path;
 
@@ -19,7 +20,11 @@ int main(int argc, char** argv) {
     if (inputName.extension() == ".zar") {
         ZAR ZARFile(inputName, outputDir);
         ZARFile.extract();
-    } else {
+    } else if (inputName.extension() == ".qbf") {
+        QBF QBFFile(inputName, outputDir);
+        QBFFile.extract();
+    }
+    else {
         std::cout << "Filetype not yet supported" << std::endl;
     }
 
