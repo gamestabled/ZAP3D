@@ -4,6 +4,7 @@
 
 #include "zar.hpp"
 #include "qbf.hpp"
+#include "qcl.hpp"
 
 using path = std::experimental::filesystem::path;
 
@@ -23,6 +24,9 @@ int main(int argc, char** argv) {
     } else if (inputName.extension() == ".qbf") {
         QBF QBFFile(inputName, outputDir);
         QBFFile.extract();
+    } else if (inputName.extension() == ".qcl") {
+        QCL QCLFile(inputName, outputDir);
+        QCLFile.extract();
     }
     else {
         std::cout << "Filetype not yet supported" << std::endl;
