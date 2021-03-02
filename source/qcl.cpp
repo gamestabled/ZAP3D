@@ -12,7 +12,7 @@
 void QCL::extractImpl(void) {
     file.seekg(0);
 
-    while (file.tellg() < 0x80) {
+    while(file.tellg() != 0x800) {
         uint32_t index = ReadU32();
         uint8_t r = ReadU8();
         uint8_t g = ReadU8();
