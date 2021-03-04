@@ -5,6 +5,7 @@
 #include "zar.hpp"
 #include "qbf.hpp"
 #include "qcl.hpp"
+#include "ctxb.hpp"
 
 using path = std::experimental::filesystem::path;
 
@@ -27,6 +28,9 @@ int main(int argc, char** argv) {
     } else if (inputName.extension() == ".qcl") {
         QCL QCLFile(inputName, outputDir);
         QCLFile.extract();
+    } else if (inputName.extension() == ".ctxb") {
+        CTXB CTXBFile(inputName, outputDir);
+        CTXBFile.extract();
     }
     else {
         std::cout << "Filetype not yet supported" << std::endl;

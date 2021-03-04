@@ -46,15 +46,15 @@ void QBF::extractImpl(void) {
         for (uint32_t rawByte = 0; rawByte < bitmapSize; ++rawByte) {
             rawBitmapData.push_back(ReadU8());
         }
-        
-        TextureType texType = TextureType::Error;
+
+        TextureFormat texFormat;
         if (bitsPerPixel == 4) {
-            texType = TextureType::Grayscale4bpp;
+            texFormat = TextureFormat::A4NoSwap;
         } else if (bitsPerPixel == 8) {
-            texType = TextureType::Grayscale8bpp;
+            texFormat = TextureFormat::LA4;
         }
 
-        Texture* tex = Texture::FromBinary(texType, rawBitmapData, "", glyphWidth, glyphHeight);
+        Texture* tex = Texture::FromBinary(texFormat, rawBitmapData, "", glyphWidth, glyphHeight, false);
         std::stringstream textureFilename;
         textureFilename << "tex_char_" << currentChar.glyphId;
         std::cout << textureFilename.str() << std::endl;
