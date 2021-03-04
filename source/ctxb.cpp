@@ -12,7 +12,7 @@ void CTXB::extractImpl(void) {
     file.seekg(4);
     const uint32_t size             = ReadU32(); (void)size;
     const uint16_t numChunks        = ReadU32(); (void)numChunks;
-    const uint32_t ctxbVersion      = ReadU32(); (void)ctxbVersion;
+    const uint16_t unk_0C           = ReadU32(); (void)unk_0C;
     const uint32_t offsetToTexChunk = ReadU32();
     const uint32_t offsetToTexData  = ReadU32();
 
