@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <vector>
 #include <unordered_map>
+#include <map>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -21,26 +22,41 @@ static const uint8_t SwizzleLUT[64] = {
     52, 53, 60, 61, 54, 55, 62, 63
 };
 
-static const uint8_t ETC1LUT[] = {
-    0 //TODO
+static const int ETC1LUT[][4] = {
+    { 2, 8, -2, -8 },
+    { 5, 17, -5, -17 },
+    { 9, 29, -9, -29 },
+    { 13, 42, -13, -42 },
+    { 18, 60, -18, -60 },
+    { 24, 80, -24, -80 },
+    { 33, 106, -33, -106 },
+    { 47, 183, -47, -183 },
 };
 
-static const uint32_t BPP[] = {
-    [(uint32_t)TextureFormat::RGBA8] = 32,
-    [(uint32_t)TextureFormat::RGB8] = 24,
-    [(uint32_t)TextureFormat::RGBA5551] = 16, 
-    [(uint32_t)TextureFormat::RGB565] = 16,
-    [(uint32_t)TextureFormat::RGBA4] = 16,
-    [(uint32_t)TextureFormat::LA8] = 16,
-    [(uint32_t)TextureFormat::HiLo8] = 16,
-    [(uint32_t)TextureFormat::L8] = 8,
-    [(uint32_t)TextureFormat::A8] = 8,
-    [(uint32_t)TextureFormat::LA4] = 8,
-    [(uint32_t)TextureFormat::L4] = 4,
-    [(uint32_t)TextureFormat::A4] = 4,
-    [(uint32_t)TextureFormat::ETC1] = 4,
-    [(uint32_t)TextureFormat::ETC1A4] = 8,
-    [(uint32_t)TextureFormat::A4NoSwap] = 4,
+static const uint32_t XT[] = {
+    0, 4, 0, 4
+};
+
+static const uint32_t YT[] = {
+    0, 0, 4, 4
+};
+
+static std::map<TextureFormat, uint32_t> BPP {
+    { TextureFormat::RGBA8, 32 },
+    { TextureFormat::RGB8, 24 },
+    { TextureFormat::RGBA5551, 16 },
+    { TextureFormat::RGB565, 16 },
+    { TextureFormat::RGBA4, 16 },
+    { TextureFormat::LA8, 16 },
+    { TextureFormat::HiLo8, 16 },
+    { TextureFormat::L8, 8 },
+    { TextureFormat::A8, 8 },
+    { TextureFormat::LA4, 8 },
+    { TextureFormat::L4, 4 },
+    { TextureFormat::A4, 4 },
+    { TextureFormat::ETC1, 4 },
+    { TextureFormat::ETC1A4, 8 },
+    { TextureFormat::A4NoSwap, 4 },
 };
 
 struct PicaPairHash {
@@ -60,6 +76,7 @@ TextureFormat GetPixelTextureFormat(PicaDataType dataType, PicaPixelFormat pixel
     /* ETC1 */      { { PicaDataType::UnsignedByte,      PicaPixelFormat::ETC1RGB8NativeDMP },        TextureFormat::ETC1 },
     /* ETC1 */      { { PicaDataType(0),                 PicaPixelFormat::ETC1RGB8NativeDMP },        TextureFormat::ETC1 },
     /* ETC1_A4 */   { { PicaDataType::UnsignedByte,      PicaPixelFormat::ETC1AlphaRGB8A4NativeDMP }, TextureFormat::ETC1A4 },
+    /* ETC1_A4 */   { { PicaDataType(0),                 PicaPixelFormat::ETC1AlphaRGB8A4NativeDMP }, TextureFormat::ETC1A4 },
     /* A8 */        { { PicaDataType::UnsignedByte,      PicaPixelFormat::AlphaNativeDMP },           TextureFormat::A8 },
     /* A4 */        { { PicaDataType::Unsigned4BitsDMP,  PicaPixelFormat::AlphaNativeDMP },           TextureFormat::A4 },
     /* L8 */        { { PicaDataType::UnsignedByte,      PicaPixelFormat::LuminanceNativeDMP },       TextureFormat::L8 },
@@ -72,12 +89,200 @@ TextureFormat GetPixelTextureFormat(PicaDataType dataType, PicaPixelFormat pixel
     return PicaFormatMap.at(key);
 }
 
-std::vector<uint8_t> Texture::PicaDecodeBuffer(std::vector<uint8_t> input, uint32_t width, uint32_t height, TextureFormat format) {
-    if ((format == TextureFormat::ETC1) || (format == TextureFormat::ETC1A4)) {
-        return std::vector<uint8_t>(); //TODO
+struct Color {
+    uint8_t R, G, B;
+};
+
+static uint8_t Saturate(int value) {
+    if (value > 255) return 255;
+    if (value < 0) return 0;
+    return (uint8_t)value;
+}
+
+static Color ETC1Pixel(uint32_t R, uint32_t G, uint32_t B, uint32_t X, uint32_t Y, uint32_t block, uint32_t table) {
+    uint32_t index = X * 4 + Y;
+    uint32_t MSB = block << 1;
+
+    int pixel = index < 8 ? ETC1LUT[table][((block >> (index + 24)) & 1) + ((MSB >> (index + 8)) & 2)]
+                          : ETC1LUT[table][((block >> (index +  8)) & 1) + ((MSB >> (index - 8)) & 2)];
+
+    R = Saturate((int)(R + pixel));
+    G = Saturate((int)(G + pixel));
+    B = Saturate((int)(B + pixel));
+
+    return { (uint8_t)R, (uint8_t)G, (uint8_t)B };
+}
+
+static std::vector<uint8_t> ETC1Tile(uint64_t block) {
+    uint32_t blockLow  = (uint32_t)(block >> 32);
+    uint32_t blockHigh = (uint32_t)(block >>  0);
+
+    bool flip = ((blockHigh & 0x1000000) != 0);
+    bool diff = ((blockHigh & 0x2000000) != 0);
+
+    uint32_t R1, G1, B1;
+    uint32_t R2, G2, B2;
+
+    if (diff) {
+        B1 = (blockHigh & 0x0000F8) >> 0;
+        G1 = (blockHigh & 0x00F800) >> 8;
+        R1 = (blockHigh & 0xF80000) >> 16;
+
+        B2 = (uint32_t)((int8_t)(B1 >> 3) + ((int8_t)((blockHigh & 0x000007) <<  5) >> 5));
+        G2 = (uint32_t)((int8_t)(G1 >> 3) + ((int8_t)((blockHigh & 0x000700) >>  3) >> 5));
+        R2 = (uint32_t)((int8_t)(R1 >> 3) + ((int8_t)((blockHigh & 0x070000) >> 11) >> 5));
+
+        B1 |= B1 >> 5;
+        G1 |= G1 >> 5;
+        R1 |= R1 >> 5;
+
+        B2 = (B2 << 3) | (B2 >> 2);
+        G2 = (G2 << 3) | (G2 >> 2);
+        R2 = (R2 << 3) | (R2 >> 2);
+    } else {
+        B1 = (blockHigh & 0x0000F0) >> 0;
+        G1 = (blockHigh & 0x00F000) >> 8;
+        R1 = (blockHigh & 0xF00000) >> 16;
+
+        B2 = (blockHigh & 0x00000F) << 4;
+        G2 = (blockHigh & 0x000F00) >> 4;
+        R2 = (blockHigh & 0x0F0000) >> 12;
+
+        B1 |= B1 >> 4;
+        G1 |= G1 >> 4;
+        R1 |= R1 >> 4;
+
+        B2 |= B2 >> 4;
+        G2 |= G2 >> 4;
+        R2 |= R2 >> 4;
     }
 
-    uint32_t increment = BPP[(uint32_t)format] / 8;
+    uint32_t table1 = (blockHigh >> 29) & 7;
+    uint32_t table2 = (blockHigh >> 26) & 7;
+
+    std::vector<uint8_t> output;
+    output.resize(4 * 4 * 4);
+
+    if (!flip) {
+        for (uint32_t Y = 0; Y < 4; Y++) {
+            for (uint32_t X = 0; X < 2; X++) {
+                Color Color1 = ETC1Pixel(R1, G1, B1, X + 0, Y, blockLow, table1);
+                Color Color2 = ETC1Pixel(R2, G2, B2, X + 2, Y, blockLow, table2);
+
+                uint32_t offset1 = (Y * 4 + X) * 4;
+
+                // output[Offset1 + 0] = Color1.B;
+                // output[Offset1 + 1] = Color1.G;
+                // output[Offset1 + 2] = Color1.R;
+
+                output[offset1 + 0] = Color1.R;
+                output[offset1 + 1] = Color1.G;
+                output[offset1 + 2] = Color1.B;
+
+                uint32_t offset2 = (Y * 4 + X + 2) * 4;
+
+                // output[Offset2 + 0] = Color2.B;
+                // output[Offset2 + 1] = Color2.G;
+                // output[Offset2 + 2] = Color2.R;
+
+                output[offset2 + 0] = Color2.R;
+                output[offset2 + 1] = Color2.G;
+                output[offset2 + 2] = Color2.B;
+            }
+        }
+    } else {
+        for (uint32_t Y = 0; Y < 2; Y++) {
+            for (uint32_t X = 0; X < 4; X++) {
+                Color Color1 = ETC1Pixel(R1, G1, B1, X, Y + 0, blockLow, table1);
+                Color Color2 = ETC1Pixel(R2, G2, B2, X, Y + 2, blockLow, table2);
+
+                uint32_t offset1 = (Y * 4 + X) * 4;
+
+                // output[offset1 + 0] = Color1.B;
+                // output[offset1 + 1] = Color1.G;
+                // output[offset1 + 2] = Color1.R;
+
+                output[offset1 + 0] = Color1.R;
+                output[offset1 + 1] = Color1.G;
+                output[offset1 + 2] = Color1.B;
+
+                uint32_t offset2 = ((Y + 2) * 4 + X) * 4;
+
+                // output[offset2 + 0] = Color2.B;
+                // output[offset2 + 1] = Color2.G;
+                // output[offset2 + 2] = Color2.R;
+
+                output[offset2 + 0] = Color2.R;
+                output[offset2 + 1] = Color2.G;
+                output[offset2 + 2] = Color2.B;
+            }
+        }
+    }
+    return output;
+}
+
+uint64_t Swap64(uint64_t value) {
+    value = ((value & 0xffffffff00000000) >> 32) | ((value & 0x00000000ffffffff) << 32);
+    value = ((value & 0xffff0000ffff0000) >> 16) | ((value & 0x0000ffff0000ffff) << 16);
+    value = ((value & 0xff00ff00ff00ff00) >>  8) | ((value & 0x00ff00ff00ff00ff) <<  8);
+    return value;
+}
+
+std::vector<uint8_t> ETC1Decompress(std::vector<uint8_t> input, uint32_t width, uint32_t height, bool alpha) {
+    std::vector<uint8_t> output;
+    output.resize(width * height * 4);
+    uint32_t iOffset = 0;
+
+    for (uint32_t tileY = 0; tileY < height; tileY += 8) {
+        for (uint32_t tileX = 0; tileX < width; tileX += 8) {
+            for (uint32_t t = 0; t < 4; t++) {
+
+                uint64_t alphaBlock = 0;
+                if (alpha) {
+                    for (uint32_t i = 0; i < 8; i++) {
+                        alphaBlock |= (input[iOffset] << (i * 8));
+                        iOffset++;
+                    }
+                } else {
+                    alphaBlock = 0xFFFFFFFFFFFFFFFFul;
+                }
+
+                uint64_t colorBlock = 0;
+                for (int i = 0; i < 8; i++) {
+                    colorBlock |= (input[iOffset] << (i * 8));
+                }
+                colorBlock = Swap64(colorBlock);
+
+                std::vector<uint8_t> tile = ETC1Tile(colorBlock);
+                uint32_t tileOffset = 0;
+
+                for (uint32_t PY = YT[t]; PY < (YT[t] + 4); PY++) {
+                    for (uint32_t PX = XT[t]; PX < (XT[t] + 4); ++PX) {
+                        uint32_t oOffset = ((height - 1 - (tileY + PY)) * width + tileX + PX) * 4;
+                        //block copy
+                        output[oOffset + 0] = tile[tileOffset + 0];
+                        output[oOffset + 1] = tile[tileOffset + 1];
+                        output[oOffset + 2] = tile[tileOffset + 2];
+
+                        uint32_t alphaShift = ((PX & 3) * 4 + (PY & 3)) << 2;
+                        uint8_t A = (uint8_t)((alphaBlock >> alphaShift) & 0xF);
+                        output[oOffset + 3] = (uint8_t)((A << 4) | A);
+                        tileOffset += 4;
+                    }
+                }
+
+            }
+        }
+    }
+    return output;
+}
+
+std::vector<uint8_t> Texture::PicaDecodeBuffer(std::vector<uint8_t> input, uint32_t width, uint32_t height, TextureFormat format) {
+    if ((format == TextureFormat::ETC1) || (format == TextureFormat::ETC1A4)) {
+        return ETC1Decompress(input, width, height, format == TextureFormat::ETC1A4);
+    }
+
+    uint32_t increment = BPP[format] / 8;
     if (increment == 0) increment = 1;
 
     std::vector<uint8_t> output;
@@ -214,7 +419,7 @@ std::vector<uint8_t> Texture::DecodeBuffer(std::vector<uint8_t> input, uint32_t 
         return std::vector<uint8_t>(); //TODO
     }
 
-    uint32_t increment = BPP[(uint32_t)format] / 8;
+    uint32_t increment = BPP[format] / 8;
     if (increment == 0) increment = 1;
 
     std::vector<uint8_t> output;
