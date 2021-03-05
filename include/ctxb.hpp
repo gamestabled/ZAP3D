@@ -12,8 +12,9 @@
 class CTXBTexture {
 public:
     uint32_t dataLength;
-    uint16_t unk_04;
-    uint16_t unk_06;
+    uint16_t mipmapSize;
+    bool isETC1;
+    bool isCubemap;
     uint16_t width;
     uint16_t height;
     PicaPixelFormat pixelFormat;
@@ -39,8 +40,9 @@ public:
         file.seekg(offset);
         CTXBTexture* ctex = new CTXBTexture;
         ctex->dataLength = ReadU32();
-        ctex->unk_04 = ReadU16();
-        ctex->unk_06 = ReadU16();
+        ctex->mipmapSize = ReadU16();
+        ctex->isETC1 = ReadU8() != 0;
+        ctex->isCubemap = ReadU8() != 0;
         ctex->width = ReadU16();
         ctex->height = ReadU16();
         ctex->pixelFormat = (PicaPixelFormat)ReadU16();
