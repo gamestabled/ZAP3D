@@ -28,9 +28,9 @@ class CTXB : Z3Dfile {
 public:
 
     CTXB(path filepath, path outputDirectory) : Z3Dfile(filepath, outputDirectory) {
-        char magic[4];
+        char magic[8] = { 0 };
         file.read(magic, 4);
-        if (!strncmp(magic, "ctxb", 4)) {
+        if (strncmp(magic, "ctxb", 4)) {
             std::cerr << "File \"" << filepath << "\" is not a CTXB." << std::endl;
             return;
         }

@@ -17,9 +17,9 @@ void CTXB::extractImpl(void) {
     const uint32_t offsetToTexData  = ReadU32();
 
     file.seekg(offsetToTexChunk);
-    char texMagic[4];
+    char texMagic[8] = { 0 };
     file.read(texMagic, 4);
-    if (!strncmp(texMagic, "tex ", 4)) {
+    if (strncmp(texMagic, "tex ", 4)) {
         std::cerr << "Error parsing CTXB file" << std::endl;
         return;
     }

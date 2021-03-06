@@ -241,7 +241,7 @@ std::vector<uint8_t> ETC1Decompress(std::vector<uint8_t> input, uint32_t width, 
 
                 for (uint32_t PY = YT[t]; PY < (YT[t] + 4); PY++) {
                     for (uint32_t PX = XT[t]; PX < (XT[t] + 4); ++PX) {
-                        uint32_t oOffset = ((height - 1 - (tileY + PY)) * width + tileX + PX) * 4;
+                        uint32_t oOffset = (((tileY + PY)) * width + tileX + PX) * 4;
                         //block copy
                         output[oOffset + 0] = tile[tileOffset + 0];
                         output[oOffset + 1] = tile[tileOffset + 1];

@@ -12,9 +12,9 @@ class QBF : Z3Dfile {
 public:
 
     QBF(path filepath, path outputDirectory) : Z3Dfile(filepath, outputDirectory) {
-        char magic[4];
+        char magic[8] = { 0 };
         file.read(magic, 4);
-        if (!strncmp(magic, "QBF1", 4)) {
+        if (strncmp(magic, "QBF1", 4)) {
             std::cerr << "File \"" << filepath << "\" is not a QBF." << std::endl;
             return;
         }

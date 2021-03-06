@@ -12,9 +12,9 @@ class ZAR : Z3Dfile {
 public:
 
     ZAR(path filepath, path outputDirectory) : Z3Dfile(filepath, outputDirectory) {
-        char magic[4];
+        char magic[8] = { 0 };
         file.read(magic, 4);
-        if (!strncmp(magic, "ZAR\x01", 4)) {
+        if (strncmp(magic, "ZAR\x01", 4)) {
             std::cerr << "File \"" << filepath << "\" is not a ZAR." << std::endl;
             return;
         }
