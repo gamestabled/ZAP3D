@@ -30,7 +30,7 @@ public:
     CTXB(path filepath, path outputDirectory) : Z3Dfile(filepath, outputDirectory) {
         char magic[4];
         file.read(magic, 4);
-        if (magic != std::string("ctxb")) {
+        if (!strncmp(magic, "ctxb", 4)) {
             std::cerr << "File \"" << filepath << "\" is not a CTXB." << std::endl;
             return;
         }
