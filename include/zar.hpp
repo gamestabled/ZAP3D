@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <experimental/filesystem>
@@ -14,7 +14,7 @@ public:
     ZAR(path filepath, path outputDirectory) : Z3Dfile(filepath, outputDirectory) {
         char magic[4];
         file.read(magic, 4);
-        if (magic != std::string("ZAR\x01")) {
+        if (!strncmp(magic, "ZAR\x01", 4)) {
             std::cerr << "File \"" << filepath << "\" is not a ZAR." << std::endl;
             return;
         }

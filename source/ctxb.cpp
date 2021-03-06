@@ -19,7 +19,7 @@ void CTXB::extractImpl(void) {
     file.seekg(offsetToTexChunk);
     char texMagic[4];
     file.read(texMagic, 4);
-    if (texMagic != std::string("tex ")) {
+    if (!strncmp(texMagic, "tex ", 4)) {
         std::cerr << "Error parsing CTXB file" << std::endl;
         return;
     }

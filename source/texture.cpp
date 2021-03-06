@@ -117,8 +117,8 @@ static std::vector<uint8_t> ETC1Tile(uint64_t block) {
     uint32_t blockLow  = (uint32_t)(block >> 32);
     uint32_t blockHigh = (uint32_t)(block >>  0);
 
-    bool flip = ((blockHigh & 0x1000000) != 0);
-    bool diff = ((blockHigh & 0x2000000) != 0);
+    bool flip = (blockHigh & 0x1000000) != 0;
+    bool diff = (blockHigh & 0x2000000) != 0;
 
     uint32_t R1, G1, B1;
     uint32_t R2, G2, B2;
@@ -171,23 +171,15 @@ static std::vector<uint8_t> ETC1Tile(uint64_t block) {
 
                 uint32_t offset1 = (Y * 4 + X) * 4;
 
-                // output[Offset1 + 0] = Color1.B;
-                // output[Offset1 + 1] = Color1.G;
-                // output[Offset1 + 2] = Color1.R;
-
-                output[offset1 + 0] = Color1.R;
+                output[offset1 + 0] = Color1.B;
                 output[offset1 + 1] = Color1.G;
-                output[offset1 + 2] = Color1.B;
+                output[offset1 + 2] = Color1.R;
 
                 uint32_t offset2 = (Y * 4 + X + 2) * 4;
 
-                // output[Offset2 + 0] = Color2.B;
-                // output[Offset2 + 1] = Color2.G;
-                // output[Offset2 + 2] = Color2.R;
-
-                output[offset2 + 0] = Color2.R;
+                output[offset2 + 0] = Color2.B;
                 output[offset2 + 1] = Color2.G;
-                output[offset2 + 2] = Color2.B;
+                output[offset2 + 2] = Color2.R;
             }
         }
     } else {
@@ -198,23 +190,15 @@ static std::vector<uint8_t> ETC1Tile(uint64_t block) {
 
                 uint32_t offset1 = (Y * 4 + X) * 4;
 
-                // output[offset1 + 0] = Color1.B;
-                // output[offset1 + 1] = Color1.G;
-                // output[offset1 + 2] = Color1.R;
-
-                output[offset1 + 0] = Color1.R;
+                output[offset1 + 0] = Color1.B;
                 output[offset1 + 1] = Color1.G;
-                output[offset1 + 2] = Color1.B;
+                output[offset1 + 2] = Color1.R;
 
                 uint32_t offset2 = ((Y + 2) * 4 + X) * 4;
 
-                // output[offset2 + 0] = Color2.B;
-                // output[offset2 + 1] = Color2.G;
-                // output[offset2 + 2] = Color2.R;
-
-                output[offset2 + 0] = Color2.R;
+                output[offset2 + 0] = Color2.B;
                 output[offset2 + 1] = Color2.G;
-                output[offset2 + 2] = Color2.B;
+                output[offset2 + 2] = Color2.R;
             }
         }
     }
@@ -240,8 +224,7 @@ std::vector<uint8_t> ETC1Decompress(std::vector<uint8_t> input, uint32_t width, 
                 uint64_t alphaBlock = 0;
                 if (alpha) {
                     for (uint32_t i = 0; i < 8; i++) {
-                        alphaBlock |= (input[iOffset] << (i * 8));
-                        iOffset++;
+                        alphaBlock |= (uint64_t)input[iOffset++] << (i * 8);
                     }
                 } else {
                     alphaBlock = 0xFFFFFFFFFFFFFFFFul;
@@ -249,7 +232,7 @@ std::vector<uint8_t> ETC1Decompress(std::vector<uint8_t> input, uint32_t width, 
 
                 uint64_t colorBlock = 0;
                 for (int i = 0; i < 8; i++) {
-                    colorBlock |= (input[iOffset] << (i * 8));
+                    colorBlock |= (uint64_t)input[iOffset++] << (i * 8);
                 }
                 colorBlock = Swap64(colorBlock);
 
