@@ -2,12 +2,13 @@
 #include <string>
 #include <experimental/filesystem>
 
-#include "zar.hpp"
-#include "qbf.hpp"
-#include "qcl.hpp"
-#include "ctxb.hpp"
+#include "tinyxml2.h"
+
+#include "CTXBChunk.hpp"
 
 using path = std::experimental::filesystem::path;
+using namespace std;
+using namespace tinyxml2;
 
 int main(int argc, char** argv) {
     if (argc != 3) {
@@ -19,20 +20,14 @@ int main(int argc, char** argv) {
     path inputName = argv[1];
     path outputDir = argv[2];
 
-    if (inputName.extension() == ".zar") {
-        ZAR ZARFile(inputName, outputDir);
-        ZARFile.extract();
-    } else if (inputName.extension() == ".qbf") {
-        QBF QBFFile(inputName, outputDir);
-        QBFFile.extract();
-    } else if (inputName.extension() == ".qcl") {
-        QCL QCLFile(inputName, outputDir);
-        QCLFile.extract();
-    } else if (inputName.extension() == ".ctxb") {
-        CTXB CTXBFile(inputName, outputDir);
-        CTXBFile.extract();
-    }
-    else {
+    if (inputName.extension() == ".ctxb") {
+        std::ifstream ins(inputName);
+        CTXBChunk* ctxb = CTXBChunk::FromBinary(ins, 0);
+        if (ctxb) {
+            ctxb->SetName(inputName.stem());
+            ctxb->Save(outputDir);
+        }
+    } else {
         std::cout << "Filetype not yet supported" << std::endl;
     }
 

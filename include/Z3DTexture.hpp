@@ -6,9 +6,12 @@
 #include <fstream>
 #include <experimental/filesystem>
 
-#include "utils.hpp"
+#include <utils.hpp>
+
+#include "Z3DResource.hpp"
 
 enum class PicaDataType : uint {
+    None = 0,
     Byte = 0x1400,
     UnsignedByte = 0x1401,
     Short = 0x1402,
@@ -49,30 +52,33 @@ enum class TextureFormat : uint {
     ETC1,
     ETC1A4,
     A4NoSwap,
+    Error,
 };
 
 TextureFormat GetPixelTextureFormat(PicaDataType dataType, PicaPixelFormat pixelFormat);
+void DecodePixel(std::vector<uint8_t>& output, uint32_t oOffset, const std::vector<uint8_t>& input, uint32_t iOffset, TextureFormat format);
+std::vector<uint8_t> PicaDecodeBuffer(std::vector<uint8_t> input, uint32_t width, uint32_t height, TextureFormat format);
+std::vector<uint8_t> DecodeBuffer(std::vector<uint8_t> input, uint32_t width, uint32_t height, TextureFormat format);
 
-class Texture {
-public:
+class Z3DTexture : public Z3DResource {
     using path = std::experimental::filesystem::path;
+public:
+    int width = 0;
+    int height = 0;
 
-    Texture() {};
+    Z3DTexture();
 
-    static Texture* FromBinary(TextureFormat inType, std::vector<uint8_t> inRawData, std::string inName, int inWidth, int inHeight, bool isPica);
-    static std::vector<uint8_t> PicaDecodeBuffer(std::vector<uint8_t> input, uint32_t width, uint32_t height, TextureFormat format);
-    static std::vector<uint8_t> DecodeBuffer(std::vector<uint8_t> input, uint32_t width, uint32_t height, TextureFormat format);
+    static Z3DTexture* FromBinary(TextureFormat inType, std::vector<uint8_t> inRawData, std::string inName, int inWidth, int inHeight, bool isPica);
+    static Z3DTexture* FromPNG(path pngFilePath, TextureFormat texFormat, bool isPica);
 
-    void Save(const path outDir, const std::string name);
+    int GetRawDataSize(void) override;
+    void Save(const path outFolder) override;
 
 private:
     void PrepareBitmap(void);
 
-    int width = 0;
-    int height = 0;
     TextureFormat format;
     bool isPica;
-    std::string name;
     std::vector<uint8_t> rawData;
     std::vector<uint8_t> preparedBitmap;
 };
