@@ -6,6 +6,7 @@
 
 #include "CTXBChunk.hpp"
 #include "QBF.hpp"
+#include "QCL.hpp"
 
 using path = std::experimental::filesystem::path;
 using namespace std;
@@ -34,6 +35,13 @@ int main(int argc, char** argv) {
         if (qbf) {
             qbf->SetName(inputName.stem());
             qbf->Save(outputDir);
+        }
+    } else if (inputName.extension() == ".qcl") {
+        std::ifstream ins(inputName);
+        QCL* qcl = QCL::FromBinary(ins, 0);
+        if (qcl) {
+            qcl->SetName(inputName.stem());
+            qcl->Save(outputDir);
         }
     } else {
         std::cout << "Filetype not yet supported" << std::endl;
