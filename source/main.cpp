@@ -5,6 +5,7 @@
 #include "tinyxml2.h"
 
 #include "CTXBChunk.hpp"
+#include "QBF.hpp"
 
 using path = std::experimental::filesystem::path;
 using namespace std;
@@ -26,6 +27,13 @@ int main(int argc, char** argv) {
         if (ctxb) {
             ctxb->SetName(inputName.stem());
             ctxb->Save(outputDir);
+        }
+    } else if (inputName.extension() == ".qbf") {
+        std::ifstream ins(inputName);
+        QBF* qbf = QBF::FromBinary(ins, 0);
+        if (qbf) {
+            qbf->SetName(inputName.stem());
+            qbf->Save(outputDir);
         }
     } else {
         std::cout << "Filetype not yet supported" << std::endl;
